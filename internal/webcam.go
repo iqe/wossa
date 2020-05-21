@@ -209,17 +209,17 @@ func encodeToImage(wc *webcam.Webcam, back chan struct{}, fi chan []byte, w, h u
 			y := 0
 			for i := 0; i < len(frame); i += 2 {
 				luma := frame[i]
-				col := color.RGBA{R: luma, G: luma, B: luma, A: 255}
+				col := color.RGBA{R: luma, G: luma, B: luma}
 
 				if y == config.OffsetY || y == config.OffsetY+config.CaptureHeight {
 					if x >= config.OffsetX && x <= config.OffsetX+config.CaptureWidth {
-						col = color.RGBA{R: 255, A: 255}
+						col = color.RGBA{R: 255}
 					}
 				}
 
 				if x == config.OffsetX || x == config.OffsetX+config.CaptureWidth {
 					if y >= config.OffsetY && y <= config.OffsetY+config.CaptureHeight {
-						col = color.RGBA{R: 255, A: 255}
+						col = color.RGBA{R: 255}
 					}
 				}
 
