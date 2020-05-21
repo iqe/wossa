@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Wossamessa Settings</title>
+
+    <link rel="stylesheet" href="milligram.min.css">
+    <script src="cash.min.js"></script>
+    <style>
+        .disabled {
+            color: lightgray;
+        }
+    </style>
+</head>
+<body>
+    <main class="wrapper">
+        <form method="GET" id="form">
+            <section class="container">
+                <div class="row">
+                    <div class="column">
+                            <h1 class="title">Preview</h1>
+                            <a id="autofocus" href="#">
+                                <img id="preview" src="/api/v1/preview.jpg" />
+                            </a>
+                            <p><b>Click  image to trigger autofocus.</b><br/><small>Auto-refreshes every 2 seconds.</small></p>
+                        </div>
+                        <div class="column">
+                            <h1>Documentation</h1>
+                            <ol>
+                                <li>Place your phone above your water meter</li>
+                                <li>Configure capturing rectangle (see <a href="#capturing">Capturing</a>)</li>
+                                <li>Enable calibration messages (see <a href="#connectivity">MQTT</a>)</li>
+                                <li>Use a MQTT client to view calibration messages. Set <em>Trigger High</em> and <em>Trigger Low</em> to according to the readings.</em></li>
+                                <li>Optional: Set initial meter value (see <a href"current-value">Current Value</a>)</li>
+                            </ol>
+                        </div>
+                    </div>
+            </section>
+            <section class="container">
+                <h1 class="title" id="capturing">Capturing</h1>
+                <div class="row">
+                    <div class="column">
+                        <label for="offset-x">X <small>(offset from top left)</small></label>
+                        <input type="number" id="offset-x" name="offset-x" placeholder="0">
+                    </div>
+                    <div class="column">
+                        <label for="offset-y">Y <small>(offset from top left)</small></label>
+                        <input type="number" id="offset-y" name="offset-y" placeholder="0">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="column">
+                        <label for="capture-w">Width <small>(of the rectangle)</small></label>
+                        <input type="number" id="capture-w" name="capture-w">
+                    </div>
+                    <div class="column">
+                        <label for="capture-h">Height <small>(of the rectangle)</small></label>
+                        <input type="number" id="capture-h" name="capture-h">
+                    </div>
+                </div>
+                <input type="checkbox" id="flashlight" name="flashlight">
+                <label for="flashlight" class="label-inline">Turn on flashlight</label>
+                <label for="contrast">Contrast <small>(0-255)</small></label>
+                <input type="number" id="contrast" name="contrast" min="0" max="255">
+                <label for="brightness">Brightness <small>(0-255)</small></label>
+                <input type="number" id="brightness" name="brightness" min="0" max="255">
+                <label for="trigger-high">Trigger High</label>
+                <input type="number" id="trigger-high" name="trigger-high">
+                <label for="trigger-low">Trigger Low</label>
+                <input type="number" id="trigger-low" name="trigger-low">
+                <label for="step-size">Liters per rotation</label>
+                <input type="number" id="step-size" name="step-size">
+            </section>
+            <section class="container" id="current-value">
+                <h1>Current Value</h1>
+                <input type="checkbox" id="enable-value-m3" name="enable-value-m3">
+                <label for="enable-value-m3" class="label-inline">Override current meter value</label>
+                <fieldset id="value" class="disabled">
+                    <label for="value-m3">Current meter value <small>(m³)</small></label>
+                    <input type="number" id="value-m3" name="value-m3" min="0" step="0.001" disabled="disabled">
+                </fieldset>
+            </section>
+            <section class="container" id="connectivity">
+                <h1>Connectivity</h1>
+                <h3 class="title">MQTT</h3>
+                <fieldset id="mqtt">
+                    <p>Wossamessa can send messages to a MQTT broker on changes.</p>
+                    <label for="mqtt-host">Broker Host</label>
+                    <input type="text" id="mqtt-host" name="mqtt-host">
+                    <label for="mqtt-port">Broker Port</label>
+                    <input type="number" id="mqtt-port" name="mqtt-port" min="0" max="65535">
+                    <label for="mqtt-topic">Topic</label>
+                    <input type="text" id="mqtt-topic" name="mqtt-topic">
+                    <label for="mqtt-calibration-topic">Calibration Topic</label>
+                    <input type="text" id="mqtt-calibration-topic" name="mqtt-calibration-topic">
+                    <input type="checkbox" id="calibration" name="calibration">
+                    <label for="calibration" class="label-inline">Send calibration messages</label>
+                </fieldset>
+            </section>
+            <section class="container" id="save">
+                <input class="button-primary" value="Save" type="submit">
+                &nbsp;
+                <a href="index.html">Cancel</a>
+            </section>
+            <section class="container" id="debug">
+                <pre class="debug" id="response-status-1"></pre>
+                <pre class="debug" id="response-body-1"></pre>
+                <pre class="debug" id="response-status-2"></pre>
+                <pre class="debug" id="response-body-2"></pre>
+            </section>
+        </form>
+    </main>
+<script>
+
+$.fn.serializeJSON = function() {
+  var result = {}
+  var inputs = $(this).find("input")
+  inputs.each(function(_, field) {
+    type = field.type
+    name = field.name
+
+    if (name && field.nodeName.toLowerCase() != 'fieldset' &&
+      !field.disabled && type != 'submit' && type != 'reset' && type != 'button' && type != 'file') {
+
+      var val = $(field).val()
+      if (type === "checkbox") {
+          val = $(field).prop("checked");
+      }
+      if (val !== "") {
+        if (type === "number") {
+            val = parseFloat(val)
+        }
+        result[name] = val
+      }
+    }
+  })
+
+  return result
+}
+
+$("#form").on("submit", function (e) {
+    e.preventDefault();
+    $(".debug").text("");
+
+    var data = $(this).serializeJSON();
+
+    let xhr1 = new XMLHttpRequest();
+    xhr1.open('POST', '/api/v1/config.json');
+    xhr1.setRequestHeader("Content-type", "application/json");
+    xhr1.onload = function() {
+        $("#response-status-1").text(xhr1.status)
+        $("#response-body-1").text(xhr1.response)
+    };
+    xhr1.send(JSON.stringify(data));
+
+    if ($("#enable-value-m3").prop("checked")) {
+        let xhr2 = new XMLHttpRequest();
+        xhr2.open('POST', '/api/v1/meter.json');
+        xhr2.setRequestHeader("Content-type", "application/json");
+        xhr2.onload = function() {
+            $("#response-status-2").text(xhr2.status);
+            $("#response-body-2").text(xhr2.response);
+        };
+        xhr2.send(JSON.stringify({"m3": parseFloat(data["value-m3"]) * 1000.0}));
+    }
+});
+
+$("#autofocus").on("click", function(e) {
+    let xhr1 = new XMLHttpRequest();
+    xhr1.open('POST', '/api/v1/autofocus');
+    xhr1.send();
+})
+
+$("#enable-value-m3").on("click", function(e, ...args) {
+    toggle("#enable-value-m3", "#value");
+})
+
+$(document).ready(function() {
+    $(".debug").text("");
+
+    let xhr1 = new XMLHttpRequest();
+    xhr1.open('GET', '/api/v1/config.json');
+    xhr1.setRequestHeader("Content-type", "application/json");
+    xhr1.onload = function() {
+        $("#response-status-1").text(xhr1.status);
+        $("#response-body-1").text(xhr1.response);
+
+        let data = JSON.parse(xhr1.response);
+        for (const key in data) {
+            if (data.hasOwnProperty(key)) {
+                const value = data[key];
+                let field = $("input#" + key);
+                if (field.get(0).type === "checkbox") {
+                    field.prop('checked', value);
+                } else {
+                    field.val(value);
+                }
+            }
+        }
+    };
+    xhr1.send();
+
+    let xhr2 = new XMLHttpRequest();
+    xhr2.open("GET", "/api/v1/meter.json");
+    xhr2.setRequestHeader("Content-type", "application/json");
+    xhr2.onload = function() {
+        $("#response-status-2").text(xhr2.status);
+        $("#response-body-2").text(xhr2.response);
+
+        let data = JSON.parse(xhr2.response);
+        $("input#value-m3").val((data["l"] / 1000.0).toFixed(3));
+    }
+    xhr2.send();
+})
+
+var timer = setInterval(function() {
+    var imgUrl = "/api/v1/preview.jpg?v=" + new Date().getTime();
+    document.getElementById("preview").src = imgUrl
+},2000);
+
+
+function toggle(checkbox, fieldset) {
+    if ($(checkbox).prop("checked")) {
+        enable(fieldset)
+    } else {
+        disable(fieldset)
+    }
+}
+
+function enable(fieldset) {
+    $(fieldset).removeClass("disabled")
+    $(fieldset).find("input").removeAttr("disabled")
+}
+
+function disable(fieldset) {
+    $(fieldset).addClass("disabled")
+    $(fieldset).find("input").attr("disabled", true)
+}
+
+</script>
+
+</body>
+</html>
