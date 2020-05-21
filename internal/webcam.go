@@ -117,6 +117,8 @@ func RunWebCam(dev string) {
 	timeout := uint32(5) //5 seconds
 	start := time.Now()
 
+	zeroingPending := false
+	lastMeterChange := time.Now()
 	for {
 		err = cam.WaitForFrame(timeout)
 
@@ -147,13 +149,28 @@ func RunWebCam(dev string) {
 				sum += int(adjusted)
 			}
 
+			now := time.Now()
 			pulseDetected := detector.process(sum)
 			if pulseDetected {
 				m, _ := loadMeter()
 				m.Liters += config.StepSize
+				m.LitersPerMinute = float64(config.StepSize) / now.Sub(lastMeterChange).Minutes()
+				m.Timestamp = now.Unix()
 				saveMeter(m)
 				meterChanges <- m
-				log.Println("Pulse detected!")
+				log.Printf("Pulse detected l=%d lpm=%f\n", m.Liters, m.LitersPerMinute)
+				zeroingPending = true
+				lastMeterChange = now
+			}
+
+			if zeroingPending && now.Sub(lastMeterChange) > 10*time.Second {
+				m, _ := loadMeter()
+				m.LitersPerMinute = 0
+				m.Timestamp = now.Unix()
+				saveMeter(m)
+				meterChanges <- m
+				log.Println("Zeroing")
+				zeroingPending = false
 			}
 
 			// Encoding

@@ -40,6 +40,8 @@ var config = Config{
 	Flashlight:           false,
 	Calibration:          false,
 	StepSize:             1,
+	TriggerHigh:          1_000_000,
+	TriggerLow:           500_000,
 }
 var meter = Meter{}
 
