@@ -162,11 +162,10 @@ func RunWebCam(dev string) {
 }
 
 func adjustPixel(pixel byte, contrast int, brightness int) byte {
-	c := float32(contrast)
-	b := float32(brightness)
+	c := float32(contrast) - 128
+	b := float32(brightness) - 128
 
 	c = (259 * (c + 255)) / (255 * (259 - c))
-	b -= 128
 
 	p := c*(float32(pixel)-128) + 128 + b
 
@@ -206,29 +205,7 @@ func encodeToImage(wc *webcam.Webcam, back chan struct{}, fi chan []byte, w, h u
 			x := 0
 			y := 0
 			for i := 0; i < len(frame); i += 2 {
-				luma := frame[i]
-				luma = adjustPixel(luma, config.Contrast, config.Brightness)
-
-				// p := float32(luma)
-
-				// // 128 = 1
-				// // 0 = 0
-				// // 255 = ?
-				// contrast := float32(config.Contrast)
-				// brightness := float32(config.Brightness)
-
-				// contrast = (259 * (contrast + 255)) / (255 * (259 - contrast))
-				// brightness -= 128
-
-				// v := contrast*(p-128) + 128 + brightness
-
-				// if v < 0 {
-				// 	v = 0
-				// }
-				// if v > 255 {
-				// 	v = 255
-				// }
-				// luma = byte(v)
+				luma := adjustPixel(frame[i], config.Contrast, config.Brightness)
 
 				col := color.RGBA{R: luma, G: luma, B: luma, A: 255}
 
