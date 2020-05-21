@@ -105,6 +105,8 @@ func RunWebCam(dev string) {
 	)
 	go encodeToImage(cam, back, fi, w, h, f)
 
+	detector := pulseDetector{}
+
 	timeout := uint32(5) //5 seconds
 	start := time.Now()
 
@@ -127,26 +129,25 @@ func RunWebCam(dev string) {
 			return
 		}
 		if len(frame) != 0 {
-
 			// Calculation
 			config, _ := loadConfig()
 			sum := 0
-			sumx := 0
 			for i := 0; i < len(frame); i += 2 {
 				original := frame[i]
 				adjusted := adjustPixel(original, config.Contrast, config.Brightness)
 
 				frame[i] = adjusted
+				sum += int(adjusted)
+			}
 
-				sum += int(original)
-				sumx += int(adjusted)
+			pulseDetected := detector.process(sum)
+			if pulseDetected {
+				log.Println("Pulse detected!")
 			}
 
 			// Encoding
 			if d := time.Since(start); d > 2*time.Second {
-
 				log.Printf("Sum: %d\n", sum)
-				log.Printf("Sumx: %d\n", sumx)
 
 				select {
 				case fi <- frame:

@@ -8,7 +8,8 @@ import (
 
 // Run runs the web server and blocks forever
 func Run() {
-	r := gin.Default()
+	r := gin.New()
+	r.Use(gin.Recovery())
 
 	// Static file hosting for web ui
 	r.Static("/public", "./public")
