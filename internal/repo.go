@@ -33,12 +33,13 @@ var config = Config{
 	OffsetY:              15,
 	Contrast:             128,
 	Brightness:           128,
-	MqttHost:             "localhost",
+	MqttHost:             "zap",
 	MqttPort:             1883,
 	MqttTopic:            "wossamessa/meter",
 	MqttCalibrationTopic: "wossamessa/calibration",
 	Flashlight:           false,
 	Calibration:          false,
+	StepSize:             1,
 }
 var meter = Meter{}
 

@@ -44,6 +44,13 @@ var supportedFormats = map[webcam.PixelFormat]bool{
 
 // RunWebCam starts recording
 func RunWebCam(dev string) {
+	meterChanges := make(chan Meter)
+	calibrationValues := make(chan int)
+
+	err := initializeMqttCommunication(meterChanges, calibrationValues)
+	if err != nil {
+		panic(err.Error())
+	}
 
 	cam, err := webcam.Open(dev)
 	if err != nil {
@@ -142,6 +149,10 @@ func RunWebCam(dev string) {
 
 			pulseDetected := detector.process(sum)
 			if pulseDetected {
+				m, _ := loadMeter()
+				m.Liters += config.StepSize
+				saveMeter(m)
+				meterChanges <- m
 				log.Println("Pulse detected!")
 			}
 
