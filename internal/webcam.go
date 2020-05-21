@@ -133,14 +133,17 @@ func RunWebCam(dev string) {
 		if len(frame) != 0 {
 
 			// Calculation
-			contrast := 180
-			factor := (259 * (contrast + 255)) / (255 * (259 - contrast))
-
+			config, _ := loadConfig()
 			sum := 0
 			sumx := 0
 			for i := 0; i < len(frame); i += 2 {
-				sum += int(frame[i])
-				sumx += (int(frame[i]) * factor)
+				original := frame[i]
+				adjusted := adjustPixel(original, config.Contrast, config.Brightness)
+
+				frame[i] = adjusted
+
+				sum += int(original)
+				sumx += int(adjusted)
 			}
 
 			// Encoding
@@ -205,8 +208,7 @@ func encodeToImage(wc *webcam.Webcam, back chan struct{}, fi chan []byte, w, h u
 			x := 0
 			y := 0
 			for i := 0; i < len(frame); i += 2 {
-				luma := adjustPixel(frame[i], config.Contrast, config.Brightness)
-
+				luma := frame[i]
 				col := color.RGBA{R: luma, G: luma, B: luma, A: 255}
 
 				if y == config.OffsetY || y == config.OffsetY+config.CaptureHeight {
@@ -228,16 +230,6 @@ func encodeToImage(wc *webcam.Webcam, back chan struct{}, fi chan []byte, w, h u
 					x = 0
 					y++
 				}
-			}
-
-			yuyv := image.NewYCbCr(image.Rect(0, 0, int(w), int(h)), image.YCbCrSubsampleRatio422)
-			for i := range yuyv.Cb {
-				ii := i * 4
-				yuyv.Y[i*2] = frame[ii]
-				yuyv.Y[i*2+1] = frame[ii+2]
-				yuyv.Cb[i] = frame[ii+1]
-				yuyv.Cr[i] = frame[ii+3]
-
 			}
 			img = rgba
 		default:
