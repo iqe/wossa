@@ -7,12 +7,8 @@ import (
 	"image/color"
 	"image/jpeg"
 	"log"
-	"mime/multipart"
-	"net/http"
-	"net/textproto"
 	"os"
 	"sort"
-	"strconv"
 	"time"
 
 	"github.com/blackjack/webcam"
@@ -244,65 +240,4 @@ func encodeToImage(wc *webcam.Webcam, back chan struct{}, fi chan []byte, w, h u
 		}
 		savePreview(buf.Bytes())
 	}
-}
-
-func httpImage(addr string, li chan *bytes.Buffer) {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("connect from", r.RemoteAddr, r.URL)
-		if r.URL.Path != "/" {
-			http.NotFound(w, r)
-			return
-		}
-
-		//remove stale image
-		<-li
-
-		img := <-li
-
-		w.Header().Set("Content-Type", "image/jpeg")
-
-		if _, err := w.Write(img.Bytes()); err != nil {
-			log.Println(err)
-			return
-		}
-
-	})
-
-	log.Fatal(http.ListenAndServe(addr, nil))
-}
-
-func httpVideo(addr string, li chan *bytes.Buffer) {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("connect from", r.RemoteAddr, r.URL)
-		if r.URL.Path != "/" {
-			http.NotFound(w, r)
-			return
-		}
-
-		//remove stale image
-		<-li
-		const boundary = `frame`
-		w.Header().Set("Content-Type", `multipart/x-mixed-replace;boundary=`+boundary)
-		multipartWriter := multipart.NewWriter(w)
-		multipartWriter.SetBoundary(boundary)
-		for {
-			img := <-li
-			image := img.Bytes()
-			iw, err := multipartWriter.CreatePart(textproto.MIMEHeader{
-				"Content-type":   []string{"image/jpeg"},
-				"Content-length": []string{strconv.Itoa(len(image))},
-			})
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			_, err = iw.Write(image)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-		}
-	})
-
-	log.Fatal(http.ListenAndServe(addr, nil))
 }
