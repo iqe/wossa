@@ -1,5 +1,12 @@
 package wossamessa
 
+import (
+	"encoding/json"
+	"io/ioutil"
+	"log"
+	"time"
+)
+
 // Meter represents the current value of the meter
 type Meter struct {
 	Liters          int     `json:"l"`
@@ -43,21 +50,69 @@ var config = Config{
 	TriggerHigh:          1_000_000,
 	TriggerLow:           500_000,
 }
-var meter = Meter{}
+var configLoaded = false
 
+var meter = Meter{}
+var lastMeterSave = time.Now()
 var preview = make([]byte, 0)
+
+// ConfigDir is the directory where config and data files are stored.
+var ConfigDir = "."
 
 func saveConfig(cfg Config) error {
 	config = cfg
+
+	err := saveToFile(cfg, "config.json")
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func loadConfig() (Config, error) {
+	if configLoaded {
+		return config, nil
+	}
+	data, err := ioutil.ReadFile(ConfigDir + "/config.json")
+	if err != nil {
+		//log.Printf("Failed to read config.json: %s\n", err)
+		return config, nil
+	}
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		log.Printf("Failed to parse config.json: %s\n", err)
+		return config, nil
+	}
+
+	configLoaded = true
 	return config, nil
 }
 
 func saveMeter(m Meter) error {
 	meter = m
+
+	// Save to disk whenever the meter stops running or after 5 min
+	if m.LitersPerMinute == 0 || time.Now().Sub(lastMeterSave) > 5*time.Minute {
+		err := saveToFile(m, "meter.json")
+		if err != nil {
+			return err
+		}
+		lastMeterSave = time.Now()
+	}
+
+	return nil
+}
+
+func saveToFile(v interface{}, filename string) error {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(ConfigDir+"/"+filename, data, 0644)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
