@@ -75,6 +75,12 @@ func initializeWebcam(dev string) (*webcam.Webcam, webcam.PixelFormat, uint32, u
 	}
 	fmt.Fprintf(os.Stderr, "Resulting image format: %s %dx%d\n", formatDesc[f], w, h)
 
+	err = cam.SetFps(10)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "SetFps failed")
+		return nil, 0, 0, 0, err
+	}
+
 	return cam, f, w, h, nil
 }
 

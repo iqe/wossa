@@ -8,3 +8,5 @@ require (
 	github.com/gin-gonic/gin v1.6.3
 	golang.org/x/net v0.0.0-20200520182314-0ba52f642ac2 // indirect
 )
+
+replace github.com/blackjack/webcam => github.com/iqe/webcam v0.0.0-20191125233514-13b93ac88ff6
