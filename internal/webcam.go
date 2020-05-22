@@ -124,12 +124,12 @@ func RunWebCam(dev string) {
 	go encodeToImage(cam, back, fi, w, h, f)
 
 	detector := pulseDetector{}
-
-	start := time.Now()
-
 	zeroingPending := false
 	lastMeterChange := time.Now()
+	lastMessageSent := time.Now()
+	frameCount := 0
 	for {
+		s := time.Now()
 		frame, err := readNextFrame(cam)
 		switch err.(type) {
 		case nil:
@@ -140,7 +140,6 @@ func RunWebCam(dev string) {
 			log.Println(err)
 			return
 		}
-
 		// Calculation
 		config, _ := loadConfig()
 		sum := 0
@@ -155,6 +154,9 @@ func RunWebCam(dev string) {
 		// Pulse detection
 		now := time.Now()
 		pulseDetected := detector.process(sum)
+
+		messageSent := false
+
 		if pulseDetected {
 			m, _ := loadMeter()
 			m.Liters += config.StepSize
@@ -165,10 +167,11 @@ func RunWebCam(dev string) {
 			log.Printf("Pulse detected l=%d lpm=%f\n", m.Liters, m.LitersPerMinute)
 			zeroingPending = true
 			lastMeterChange = now
+			lastMessageSent = now
+			messageSent = true
 		}
-
 		// Pulse reset
-		if zeroingPending && now.Sub(lastMeterChange) > 10*time.Second {
+		if zeroingPending && now.Sub(lastMeterChange) > 5*time.Second {
 			m, _ := loadMeter()
 			m.LitersPerMinute = 0
 			m.Timestamp = now.Unix()
@@ -176,20 +179,42 @@ func RunWebCam(dev string) {
 			meterChanges <- m
 			log.Println("Zeroing")
 			zeroingPending = false
+			lastMeterChange = now
+			lastMessageSent = now
+			messageSent = true
 		}
 
-		// Encoding
-		if d := time.Since(start); d > 2*time.Second {
-			log.Printf("Sum: %d\n", sum)
+		if now.Sub(lastMeterChange) > 10*time.Second {
+			lastMeterChange = now
+		}
 
+		if !messageSent && now.Sub(lastMessageSent) > 15*time.Second {
+			m, _ := loadMeter()
+			m.Timestamp = now.Unix()
+			meterChanges <- m
+			messageSent = true
+			lastMessageSent = now
+		}
+
+		// Preview
+		if frameCount%20 == 0 { // ~ every 2 seconds
 			select {
 			case fi <- frame:
 				<-back
 			default:
 			}
-			start = time.Now()
 		}
-		time.Sleep(75 * time.Millisecond)
+
+		if config.Calibration && frameCount%5 == 0 { // ~ 2 msg/s
+			calibrationValues <- sum
+		}
+
+		frameCount++
+		log.Println(frameCount)
+		// Aim for ~ 10fps
+		//time.Sleep(75 * time.Millisecond)
+
+		fmt.Printf("%v", time.Now().Sub(s))
 	}
 }
 

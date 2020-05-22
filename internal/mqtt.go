@@ -33,12 +33,17 @@ func sendToMqtt(client mqtt.Client, meterChanges chan Meter, calibrationValues c
 		select {
 		case meter := <-meterChanges:
 			config, _ := loadConfig()
-
 			data, _ := json.Marshal(meter)
+			log.Printf("Mqtt: Sending meter: %s\n", data)
+
 			token := client.Publish(config.MqttTopic, 0, false, data)
 			token.Wait()
 		case cal := <-calibrationValues:
-			log.Printf("%s\n", cal)
+			config, _ := loadConfig()
+			data, _ := json.Marshal(cal)
+			log.Printf("Mqtt: Sending calibration value: %s\n", cal)
+			token := client.Publish(config.MqttTopic, 0, false, data)
+			token.Wait()
 		}
 	}
 }
