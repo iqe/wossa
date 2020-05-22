@@ -42,6 +42,32 @@ var supportedFormats = map[webcam.PixelFormat]bool{
 	V4L2_PIX_FMT_YUYV: true,
 }
 
+func readNextFrame(cam *webcam.Webcam) ([]byte, error) {
+	timeout := uint32(5) //5 seconds
+	err := cam.WaitForFrame(timeout)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	frame, err := cam.ReadFrame()
+	if err != nil {
+		return []byte{}, err
+	}
+
+	if len(frame) == 0 {
+		return []byte{}, &EmptyFrameError{}
+	}
+
+	return frame, nil
+}
+
+type EmptyFrameError struct {
+}
+
+func (e *EmptyFrameError) Error() string {
+	return "Frame is empty"
+}
+
 // RunWebCam starts recording
 func RunWebCam(dev string) {
 	meterChanges := make(chan Meter)
@@ -114,14 +140,12 @@ func RunWebCam(dev string) {
 
 	detector := pulseDetector{}
 
-	timeout := uint32(5) //5 seconds
 	start := time.Now()
 
 	zeroingPending := false
 	lastMeterChange := time.Now()
 	for {
-		err = cam.WaitForFrame(timeout)
-
+		frame, err := readNextFrame(cam)
 		switch err.(type) {
 		case nil:
 		case *webcam.Timeout:
@@ -132,11 +156,6 @@ func RunWebCam(dev string) {
 			return
 		}
 
-		frame, err := cam.ReadFrame()
-		if err != nil {
-			log.Println(err)
-			return
-		}
 		if len(frame) != 0 {
 			// Calculation
 			config, _ := loadConfig()
