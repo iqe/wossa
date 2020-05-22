@@ -15,7 +15,6 @@ import (
 )
 
 const (
-	V4L2_PIX_FMT_PJPG = 0x47504A50
 	V4L2_PIX_FMT_YUYV = 0x56595559
 )
 
@@ -25,21 +24,16 @@ func (slice FrameSizes) Len() int {
 	return len(slice)
 }
 
-//For sorting purposes
+// For sorting purposes
 func (slice FrameSizes) Less(i, j int) bool {
 	ls := slice[i].MaxWidth * slice[i].MaxHeight
 	rs := slice[j].MaxWidth * slice[j].MaxHeight
 	return ls < rs
 }
 
-//For sorting purposes
+// For sorting purposes
 func (slice FrameSizes) Swap(i, j int) {
 	slice[i], slice[j] = slice[j], slice[i]
-}
-
-var supportedFormats = map[webcam.PixelFormat]bool{
-	V4L2_PIX_FMT_PJPG: true,
-	V4L2_PIX_FMT_YUYV: true,
 }
 
 func initializeWebcam(dev string) (*webcam.Webcam, webcam.PixelFormat, uint32, uint32, error) {
@@ -217,11 +211,11 @@ func adjustPixel(pixel byte, contrast int, brightness int) byte {
 }
 
 func encodeToImage(wc *webcam.Webcam, back chan struct{}, fi chan []byte, w, h uint32, format webcam.PixelFormat) {
-
 	var (
 		frame []byte
 		img   image.Image
 	)
+
 	for {
 		bframe := <-fi
 		// copy frame
@@ -261,6 +255,7 @@ func createImage(frame []byte, w int, h int, config Config) *image.RGBA {
 		luma := frame[i]
 		col := color.RGBA{R: luma, G: luma, B: luma}
 
+		// Draw red border around capture area
 		if y == config.OffsetY || y == config.OffsetY+config.CaptureHeight {
 			if x >= config.OffsetX && x <= config.OffsetX+config.CaptureWidth {
 				col = color.RGBA{R: 255}
