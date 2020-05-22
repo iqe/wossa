@@ -237,36 +237,7 @@ func encodeToImage(wc *webcam.Webcam, back chan struct{}, fi chan []byte, w, h u
 			if err != nil {
 				return
 			}
-
-			rgba := image.NewRGBA(image.Rect(0, 0, int(w), int(h)))
-
-			x := 0
-			y := 0
-			for i := 0; i < len(frame); i += 2 {
-				luma := frame[i]
-				col := color.RGBA{R: luma, G: luma, B: luma}
-
-				if y == config.OffsetY || y == config.OffsetY+config.CaptureHeight {
-					if x >= config.OffsetX && x <= config.OffsetX+config.CaptureWidth {
-						col = color.RGBA{R: 255}
-					}
-				}
-
-				if x == config.OffsetX || x == config.OffsetX+config.CaptureWidth {
-					if y >= config.OffsetY && y <= config.OffsetY+config.CaptureHeight {
-						col = color.RGBA{R: 255}
-					}
-				}
-
-				rgba.Set(x, y, col)
-
-				x++
-				if x == int(w) {
-					x = 0
-					y++
-				}
-			}
-			img = rgba
+			img = createImage(frame, int(w), int(h), config)
 		default:
 			log.Fatal("invalid format ?")
 		}
@@ -279,4 +250,37 @@ func encodeToImage(wc *webcam.Webcam, back chan struct{}, fi chan []byte, w, h u
 		}
 		savePreview(buf.Bytes())
 	}
+}
+
+func createImage(frame []byte, w int, h int, config Config) *image.RGBA {
+	rgba := image.NewRGBA(image.Rect(0, 0, w, h))
+
+	x := 0
+	y := 0
+	for i := 0; i < len(frame); i += 2 {
+		luma := frame[i]
+		col := color.RGBA{R: luma, G: luma, B: luma}
+
+		if y == config.OffsetY || y == config.OffsetY+config.CaptureHeight {
+			if x >= config.OffsetX && x <= config.OffsetX+config.CaptureWidth {
+				col = color.RGBA{R: 255}
+			}
+		}
+
+		if x == config.OffsetX || x == config.OffsetX+config.CaptureWidth {
+			if y >= config.OffsetY && y <= config.OffsetY+config.CaptureHeight {
+				col = color.RGBA{R: 255}
+			}
+		}
+
+		rgba.Set(x, y, col)
+
+		x++
+		if x == int(w) {
+			x = 0
+			y++
+		}
+	}
+
+	return rgba
 }
