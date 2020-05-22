@@ -42,47 +42,11 @@ var supportedFormats = map[webcam.PixelFormat]bool{
 	V4L2_PIX_FMT_YUYV: true,
 }
 
-func readNextFrame(cam *webcam.Webcam) ([]byte, error) {
-	timeout := uint32(5) //5 seconds
-	err := cam.WaitForFrame(timeout)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	frame, err := cam.ReadFrame()
-	if err != nil {
-		return []byte{}, err
-	}
-
-	if len(frame) == 0 {
-		return []byte{}, &EmptyFrameError{}
-	}
-
-	return frame, nil
-}
-
-type EmptyFrameError struct {
-}
-
-func (e *EmptyFrameError) Error() string {
-	return "Frame is empty"
-}
-
-// RunWebCam starts recording
-func RunWebCam(dev string) {
-	meterChanges := make(chan Meter)
-	calibrationValues := make(chan int)
-
-	err := initializeMqttCommunication(meterChanges, calibrationValues)
-	if err != nil {
-		panic(err.Error())
-	}
-
+func initializeWebcam(dev string) (*webcam.Webcam, webcam.PixelFormat, uint32, uint32, error) {
 	cam, err := webcam.Open(dev)
 	if err != nil {
-		panic(err.Error())
+		return nil, 0, 0, 0, err
 	}
-	defer cam.Close()
 
 	// select pixel format
 	formatDesc := cam.GetSupportedFormats()
@@ -96,8 +60,7 @@ func RunWebCam(dev string) {
 		}
 	}
 	if format == 0 {
-		log.Println("No format found, exiting")
-		return
+		return nil, 0, 0, 0, fmt.Errorf("Webcam does not support YUYV format")
 	}
 
 	// select frame size
@@ -111,19 +74,47 @@ func RunWebCam(dev string) {
 	var size *webcam.FrameSize
 	size = &frames[0]
 
-	if size == nil {
-		log.Println("No matching frame size, exiting")
-		return
-	}
-
 	fmt.Fprintln(os.Stderr, "Requesting", formatDesc[format], size.GetString())
 	f, w, h, err := cam.SetImageFormat(format, uint32(size.MaxWidth), uint32(size.MaxHeight))
 	if err != nil {
-		log.Println("SetImageFormat return error", err)
-		return
-
+		return nil, 0, 0, 0, err
 	}
 	fmt.Fprintf(os.Stderr, "Resulting image format: %s %dx%d\n", formatDesc[f], w, h)
+
+	return cam, f, w, h, nil
+}
+
+func readNextFrame(cam *webcam.Webcam) ([]byte, error) {
+	timeout := uint32(5) //5 seconds
+	err := cam.WaitForFrame(timeout)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	frame, err := cam.ReadFrame()
+	if err != nil {
+		return []byte{}, err
+	}
+
+	if len(frame) == 0 {
+		return []byte{}, fmt.Errorf("Webcam returned empty frame")
+	}
+
+	return frame, nil
+}
+
+// RunWebCam starts recording
+func RunWebCam(dev string) {
+	meterChanges := make(chan Meter)
+	calibrationValues := make(chan int)
+
+	cam, f, w, h, err := initializeWebcam(dev)
+	defer cam.Close()
+
+	err = initializeMqttCommunication(meterChanges, calibrationValues)
+	if err != nil {
+		panic(err.Error())
+	}
 
 	// start streaming
 	err = cam.StartStreaming()
@@ -156,53 +147,53 @@ func RunWebCam(dev string) {
 			return
 		}
 
-		if len(frame) != 0 {
-			// Calculation
-			config, _ := loadConfig()
-			sum := 0
-			for i := 0; i < len(frame); i += 2 {
-				original := frame[i]
-				adjusted := adjustPixel(original, config.Contrast, config.Brightness)
+		// Calculation
+		config, _ := loadConfig()
+		sum := 0
+		for i := 0; i < len(frame); i += 2 {
+			original := frame[i]
+			adjusted := adjustPixel(original, config.Contrast, config.Brightness)
 
-				frame[i] = adjusted
-				sum += int(adjusted)
+			frame[i] = adjusted
+			sum += int(adjusted)
+		}
+
+		// Pulse detection
+		now := time.Now()
+		pulseDetected := detector.process(sum)
+		if pulseDetected {
+			m, _ := loadMeter()
+			m.Liters += config.StepSize
+			m.LitersPerMinute = float64(config.StepSize) / now.Sub(lastMeterChange).Minutes()
+			m.Timestamp = now.Unix()
+			saveMeter(m)
+			meterChanges <- m
+			log.Printf("Pulse detected l=%d lpm=%f\n", m.Liters, m.LitersPerMinute)
+			zeroingPending = true
+			lastMeterChange = now
+		}
+
+		// Pulse reset
+		if zeroingPending && now.Sub(lastMeterChange) > 10*time.Second {
+			m, _ := loadMeter()
+			m.LitersPerMinute = 0
+			m.Timestamp = now.Unix()
+			saveMeter(m)
+			meterChanges <- m
+			log.Println("Zeroing")
+			zeroingPending = false
+		}
+
+		// Encoding
+		if d := time.Since(start); d > 2*time.Second {
+			log.Printf("Sum: %d\n", sum)
+
+			select {
+			case fi <- frame:
+				<-back
+			default:
 			}
-
-			now := time.Now()
-			pulseDetected := detector.process(sum)
-			if pulseDetected {
-				m, _ := loadMeter()
-				m.Liters += config.StepSize
-				m.LitersPerMinute = float64(config.StepSize) / now.Sub(lastMeterChange).Minutes()
-				m.Timestamp = now.Unix()
-				saveMeter(m)
-				meterChanges <- m
-				log.Printf("Pulse detected l=%d lpm=%f\n", m.Liters, m.LitersPerMinute)
-				zeroingPending = true
-				lastMeterChange = now
-			}
-
-			if zeroingPending && now.Sub(lastMeterChange) > 10*time.Second {
-				m, _ := loadMeter()
-				m.LitersPerMinute = 0
-				m.Timestamp = now.Unix()
-				saveMeter(m)
-				meterChanges <- m
-				log.Println("Zeroing")
-				zeroingPending = false
-			}
-
-			// Encoding
-			if d := time.Since(start); d > 2*time.Second {
-				log.Printf("Sum: %d\n", sum)
-
-				select {
-				case fi <- frame:
-					<-back
-				default:
-				}
-				start = time.Now()
-			}
+			start = time.Now()
 		}
 		time.Sleep(75 * time.Millisecond)
 	}
