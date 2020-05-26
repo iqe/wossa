@@ -75,6 +75,11 @@ func initializeWebcam(dev string) (*webcam.Webcam, webcam.PixelFormat, uint32, u
 	}
 	fmt.Fprintf(os.Stderr, "Resulting image format: %s %dx%d\n", formatDesc[f], w, h)
 
+	err = cam.SetBufferCount(16)
+	if err != nil {
+		return nil, 0, 0, 0, err
+	}
+
 	err = cam.SetFps(10)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "SetFps failed")
@@ -100,7 +105,7 @@ func readNextFrame(cam *webcam.Webcam) ([]byte, error) {
 		return []byte{}, fmt.Errorf("Webcam returned empty frame")
 	}
 
-	return frame, nil
+	return frame, err
 }
 
 // RunWebCam starts recording
