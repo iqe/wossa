@@ -140,7 +140,7 @@ func RunWebCam(dev string) {
 	lastMessageSent := time.Now()
 	frameCount := 0
 	for {
-		s := time.Now()
+		//s := time.Now()
 		frame, err := readNextFrame(cam)
 		switch err.(type) {
 		case nil:
@@ -153,13 +153,27 @@ func RunWebCam(dev string) {
 		}
 		// Calculation
 		config, _ := loadConfig()
-		sum := 0
+
+		sum, x, y := 0, 0, 0
 		for i := 0; i < len(frame); i += 2 {
 			original := frame[i]
 			adjusted := adjustPixel(original, config.Contrast, config.Brightness)
 
 			frame[i] = adjusted
-			sum += int(adjusted)
+
+			// Calculate sum
+			if y >= config.OffsetY && y <= config.OffsetY+config.CaptureHeight {
+				if x >= config.OffsetX && x <= config.OffsetX+config.CaptureWidth {
+					sum += int(adjusted)
+				}
+			}
+
+			// Track x, y coordinates
+			x++
+			if x == int(w) {
+				x = 0
+				y++
+			}
 		}
 
 		// Pulse detection
@@ -221,11 +235,11 @@ func RunWebCam(dev string) {
 		}
 
 		frameCount++
-		log.Println(frameCount)
+		//log.Println(frameCount)
 		// Aim for ~ 10fps
 		//time.Sleep(75 * time.Millisecond)
 
-		fmt.Printf("%v", time.Now().Sub(s))
+		//fmt.Printf("%v", time.Now().Sub(s))
 	}
 }
 
@@ -285,8 +299,7 @@ func encodeToImage(wc *webcam.Webcam, back chan struct{}, fi chan []byte, w, h u
 func createImage(frame []byte, w int, h int, config Config) *image.RGBA {
 	rgba := image.NewRGBA(image.Rect(0, 0, w, h))
 
-	x := 0
-	y := 0
+	x, y := 0, 0
 	for i := 0; i < len(frame); i += 2 {
 		luma := frame[i]
 		col := color.RGBA{R: luma, G: luma, B: luma}
