@@ -42,7 +42,7 @@ func sendToMqtt(client mqtt.Client, meterChanges chan Meter, calibrationValues c
 			config, _ := loadConfig()
 			data, _ := json.Marshal(cal)
 			log.Printf("Mqtt: Sending calibration value: %s\n", cal)
-			token := client.Publish(config.MqttTopic, 0, false, data)
+			token := client.Publish(config.MqttCalibrationTopic, 0, false, data)
 			token.Wait()
 		}
 	}
