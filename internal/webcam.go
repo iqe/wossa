@@ -113,13 +113,20 @@ func RunWebCam(dev string) {
 	meterChanges := make(chan Meter)
 	calibrationValues := make(chan int)
 
-	cam, f, w, h, err := initializeWebcam(dev)
-	defer cam.Close()
-
-	err = initializeMqttCommunication(meterChanges, calibrationValues)
+	config, err := loadConfig()
 	if err != nil {
 		panic(err.Error())
 	}
+
+	mqttClient := NewMqttClient(config, meterChanges, calibrationValues)
+	err = mqttClient.Connect()
+	if err != nil {
+		panic(err.Error())
+	}
+	defer mqttClient.Disconnect()
+
+	cam, f, w, h, err := initializeWebcam(dev)
+	defer cam.Close()
 
 	// start streaming
 	err = cam.StartStreaming()
@@ -137,7 +144,6 @@ func RunWebCam(dev string) {
 	detector := pulseDetector{}
 	zeroingPending := false
 	lastMeterChange := time.Now()
-	lastMessageSent := time.Now()
 	frameCount := 0
 	for {
 		//s := time.Now()
@@ -157,8 +163,9 @@ func RunWebCam(dev string) {
 		sum, x, y := 0, 0, 0
 		for i := 0; i < len(frame); i += 2 {
 			original := frame[i]
-			adjusted := adjustPixel(original, config.Contrast, config.Brightness)
 
+			// Brightness / contrast correction
+			adjusted := adjustPixel(original, config.Contrast, config.Brightness)
 			frame[i] = adjusted
 
 			// Calculate sum
@@ -180,8 +187,6 @@ func RunWebCam(dev string) {
 		now := time.Now()
 		pulseDetected := detector.process(sum)
 
-		messageSent := false
-
 		if pulseDetected {
 			m, _ := loadMeter()
 			m.Liters += config.StepSize
@@ -192,8 +197,6 @@ func RunWebCam(dev string) {
 			log.Printf("Pulse detected l=%d lpm=%f\n", m.Liters, m.LitersPerMinute)
 			zeroingPending = true
 			lastMeterChange = now
-			lastMessageSent = now
-			messageSent = true
 		}
 		// Pulse reset
 		if zeroingPending && now.Sub(lastMeterChange) > 5*time.Second {
@@ -205,20 +208,10 @@ func RunWebCam(dev string) {
 			log.Println("Zeroing")
 			zeroingPending = false
 			lastMeterChange = now
-			lastMessageSent = now
-			messageSent = true
 		}
 
 		if now.Sub(lastMeterChange) > 10*time.Second {
 			lastMeterChange = now
-		}
-
-		if !messageSent && now.Sub(lastMessageSent) > 15*time.Second {
-			m, _ := loadMeter()
-			m.Timestamp = now.Unix()
-			meterChanges <- m
-			messageSent = true
-			lastMessageSent = now
 		}
 
 		// Preview
