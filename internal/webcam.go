@@ -36,7 +36,7 @@ func (slice FrameSizes) Swap(i, j int) {
 	slice[i], slice[j] = slice[j], slice[i]
 }
 
-func initializeWebcam(dev string) (*webcam.Webcam, webcam.PixelFormat, uint32, uint32, error) {
+func initializeWebcam(dev string) (*webcam.Webcam, webcam.PixelFormat, int, int, error) {
 	cam, err := webcam.Open(dev)
 	if err != nil {
 		return nil, 0, 0, 0, err
@@ -86,7 +86,7 @@ func initializeWebcam(dev string) (*webcam.Webcam, webcam.PixelFormat, uint32, u
 		return nil, 0, 0, 0, err
 	}
 
-	return cam, f, w, h, nil
+	return cam, f, int(w), int(h), nil
 }
 
 func readNextFrame(cam *webcam.Webcam) ([]byte, error) {
@@ -162,7 +162,7 @@ func RunWebCam(dev string) {
 		config, _ := loadConfig()
 
 		sum, x, y := 0, 0, 0
-		for i := 0; i < len(frame); i += 2 {
+		for i := 0; i < len(frame); i += 2 { // in YUYV, every second byte contains luma (greyscale pixel)
 			original := frame[i]
 
 			// Brightness / contrast correction
@@ -239,18 +239,12 @@ func adjustPixel(pixel byte, contrast int, brightness int) byte {
 	return byte(p)
 }
 
-func encodeToImage(wc *webcam.Webcam, back chan struct{}, fi chan []byte, w, h uint32, format webcam.PixelFormat) {
-	var (
-		frame []byte
-		img   image.Image
-	)
+func encodeToImage(wc *webcam.Webcam, back chan struct{}, fi chan []byte, w, h int, format webcam.PixelFormat) {
+	frame := make([]byte, w*h*2) // *2 because frame is in YUYV format
+	rgba := image.NewRGBA(image.Rect(0, 0, w, h))
 
 	for {
 		bframe := <-fi
-		// copy frame
-		if len(frame) < len(bframe) {
-			frame = make([]byte, len(bframe))
-		}
 		copy(frame, bframe)
 		back <- struct{}{}
 
@@ -260,24 +254,22 @@ func encodeToImage(wc *webcam.Webcam, back chan struct{}, fi chan []byte, w, h u
 			if err != nil {
 				return
 			}
-			img = createImage(frame, int(w), int(h), config)
+			createImage(frame, rgba, w, h, config)
 		default:
 			log.Fatal("invalid format ?")
 		}
 
-		//convert to jpeg
+		//convert to jpeg (a lot faster than png)
 		buf := &bytes.Buffer{}
-		if err := jpeg.Encode(buf, img, &jpeg.Options{Quality: 100}); err != nil {
+		err := jpeg.Encode(buf, rgba, &jpeg.Options{Quality: 90})
+		if err != nil {
 			log.Fatal(err)
-			return
 		}
 		savePreview(buf.Bytes())
 	}
 }
 
-func createImage(frame []byte, w int, h int, config Config) *image.RGBA {
-	rgba := image.NewRGBA(image.Rect(0, 0, w, h))
-
+func createImage(frame []byte, rgba *image.RGBA, w int, h int, config Config) {
 	x, y := 0, 0
 	for i := 0; i < len(frame); i += 2 {
 		luma := frame[i]
@@ -304,6 +296,4 @@ func createImage(frame []byte, w int, h int, config Config) *image.RGBA {
 			y++
 		}
 	}
-
-	return rgba
 }
