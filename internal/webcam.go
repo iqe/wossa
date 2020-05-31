@@ -141,12 +141,13 @@ func RunWebCam(dev string) {
 	)
 	go encodeToImage(cam, back, fi, w, h, f)
 
+	zeroingPeriod := 5 * time.Second // TODO put into config
+
 	detector := pulseDetector{}
 	zeroingPending := false
 	lastMeterChange := time.Now()
 	frameCount := 0
 	for {
-		//s := time.Now()
 		frame, err := readNextFrame(cam)
 		switch err.(type) {
 		case nil:
@@ -188,29 +189,19 @@ func RunWebCam(dev string) {
 		pulseDetected := detector.process(sum)
 
 		if pulseDetected {
-			m, _ := loadMeter()
-			m.Liters += config.StepSize
-			m.LitersPerMinute = float64(config.StepSize) / now.Sub(lastMeterChange).Minutes()
-			m.Timestamp = now.Unix()
-			saveMeter(m)
+			m := PulseMeter()
+
 			meterChanges <- m
-			log.Printf("Pulse detected l=%d lpm=%f\n", m.Liters, m.LitersPerMinute)
 			zeroingPending = true
 			lastMeterChange = now
 		}
-		// Pulse reset
-		if zeroingPending && now.Sub(lastMeterChange) > 5*time.Second {
-			m, _ := loadMeter()
-			m.LitersPerMinute = 0
-			m.Timestamp = now.Unix()
-			saveMeter(m)
-			meterChanges <- m
-			log.Println("Zeroing")
-			zeroingPending = false
-			lastMeterChange = now
-		}
 
-		if now.Sub(lastMeterChange) > 10*time.Second {
+		// Pulse reset
+		if zeroingPending && now.Sub(lastMeterChange) > zeroingPeriod {
+			m := ZeroPulseMeter()
+
+			meterChanges <- m
+			zeroingPending = false
 			lastMeterChange = now
 		}
 
@@ -228,11 +219,6 @@ func RunWebCam(dev string) {
 		}
 
 		frameCount++
-		//log.Println(frameCount)
-		// Aim for ~ 10fps
-		//time.Sleep(75 * time.Millisecond)
-
-		//fmt.Printf("%v", time.Now().Sub(s))
 	}
 }
 

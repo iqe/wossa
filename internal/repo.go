@@ -89,6 +89,33 @@ func loadConfig() (Config, error) {
 	return config, nil
 }
 
+func PulseMeter() Meter {
+	now := time.Now()
+
+	m, _ := loadMeter()
+	lastMeterChange := time.Unix(m.Timestamp, 0)
+
+	m.Liters += config.StepSize
+	m.LitersPerMinute = float64(config.StepSize) / now.Sub(lastMeterChange).Minutes()
+	m.Timestamp = now.Unix()
+
+	log.Printf("Pulse %v\n", m)
+
+	saveMeter(m)
+	return m
+}
+
+func ZeroPulseMeter() Meter {
+	m, _ := loadMeter()
+	m.LitersPerMinute = 0
+	m.Timestamp = time.Now().Unix()
+	saveMeter(m)
+
+	log.Printf("Zero %v\n", m)
+
+	return m
+}
+
 func saveMeter(m Meter) error {
 	meter = m
 
