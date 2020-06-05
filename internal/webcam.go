@@ -136,10 +136,10 @@ func RunWebCam(dev string) {
 	}
 
 	var (
-		fi   = make(chan []byte)
-		back = make(chan struct{})
+		fi           = make(chan []byte)
+		copyComplete = make(chan bool)
 	)
-	go encodeToImage(cam, back, fi, w, h, f)
+	go encodeToImage(cam, copyComplete, fi, w, h, f)
 
 	zeroingPeriod := 5 * time.Second // TODO put into config
 
@@ -209,7 +209,7 @@ func RunWebCam(dev string) {
 		if frameCount%20 == 0 { // ~ every 2 seconds
 			select {
 			case fi <- frame:
-				<-back
+				<-copyComplete
 			default:
 			}
 		}
@@ -239,14 +239,14 @@ func adjustPixel(pixel byte, contrast int, brightness int) byte {
 	return byte(p)
 }
 
-func encodeToImage(wc *webcam.Webcam, back chan struct{}, fi chan []byte, w, h int, format webcam.PixelFormat) {
+func encodeToImage(wc *webcam.Webcam, copyComplete chan bool, fi chan []byte, w, h int, format webcam.PixelFormat) {
 	frame := make([]byte, w*h*2) // *2 because frame is in YUYV format
 	rgba := image.NewRGBA(image.Rect(0, 0, w, h))
 
 	for {
 		bframe := <-fi
 		copy(frame, bframe)
-		back <- struct{}{}
+		copyComplete <- true
 
 		switch format {
 		case V4L2_PIX_FMT_YUYV:
