@@ -136,7 +136,7 @@ func saveMeter(m Meter) error {
 }
 
 func saveToFile(v interface{}, filename string) error {
-	data, err := json.Marshal(v)
+	data, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return err
 	}
