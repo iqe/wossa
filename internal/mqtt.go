@@ -126,9 +126,13 @@ func (c *mqttClient) publish(topic string, message interface{}) error {
 
 	log.Debug("Publishing MQTT message", "topic", topic, "message", string(data))
 
-	token := c.client.Publish(topic, 0, false, data)
-	token.Wait()
-	return token.Error()
+	// Ignore result of publish so we don't slow down the capturing
+	c.client.Publish(topic, 0, false, data)
+	return nil
+
+	// token := c.client.Publish(topic, 0, false, data)
+	// token.Wait()
+	// return token.Error()
 }
 
 func (c *mqttClient) resetTicker() {
