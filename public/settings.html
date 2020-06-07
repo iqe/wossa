@@ -168,7 +168,7 @@ $("#form").on("submit", function (e) {
             $("#response-status-2").text(xhr2.status);
             $("#response-body-2").text(xhr2.response);
         };
-        xhr2.send(JSON.stringify({"m3": parseFloat(data["value-m3"]) * 1000.0}));
+        xhr2.send(JSON.stringify({"l": parseFloat(data["value-m3"]) * 1000.0}));
     }
 });
 
