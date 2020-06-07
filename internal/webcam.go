@@ -115,13 +115,13 @@ func RunWebCam(dev string) {
 
 	config, err := loadConfig()
 	if err != nil {
-		panic(err.Error())
+		log.Fatalf("Failed to load config: %s\n", err)
 	}
 
 	mqttClient := NewMqttClient(meterChanges, calibrationValues)
 	err = mqttClient.Connect(config)
 	if err != nil {
-		panic(err.Error())
+		log.Fatalf("Failed to connect to MQTT: %s\n", err)
 	}
 	defer mqttClient.Disconnect()
 
@@ -131,8 +131,7 @@ func RunWebCam(dev string) {
 	// start streaming
 	err = cam.StartStreaming()
 	if err != nil {
-		log.Println(err)
-		return
+		log.Fatalf("Failed to start streaming: %s\n", err)
 	}
 
 	var (
@@ -152,11 +151,10 @@ func RunWebCam(dev string) {
 		switch err.(type) {
 		case nil:
 		case *webcam.Timeout:
-			log.Println(err)
+			log.Printf("Timeout while reading next frame: %s\n", err)
 			continue
 		default:
-			log.Println(err)
-			return
+			log.Fatalf("Unexpected error while reading next frame: %s\n", err)
 		}
 		// Calculation
 		config, _ := loadConfig()
@@ -266,18 +264,20 @@ func encodeToImage(wc *webcam.Webcam, copyComplete chan bool, fi chan []byte, w,
 		case V4L2_PIX_FMT_YUYV:
 			config, err := loadConfig()
 			if err != nil {
-				return
+				log.Printf("Encode to image: Error while loading config: %s\n", err)
+				continue
 			}
 			createImage(frame, rgba, w, h, config)
 		default:
-			log.Fatal("invalid format ?")
+			log.Fatalf("Encode to image: Frame not in YUYV format")
 		}
 
 		//convert to jpeg (a lot faster than png)
 		buf := &bytes.Buffer{}
 		err := jpeg.Encode(buf, rgba, &jpeg.Options{Quality: 90})
 		if err != nil {
-			log.Fatal(err)
+			log.Printf("Encode to image: Error while encoding JPEG: %s\n", err)
+			continue
 		}
 		savePreview(buf.Bytes())
 	}
