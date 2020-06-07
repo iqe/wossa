@@ -22,15 +22,13 @@
                 <div class="row">
                     <div class="column">
                             <h1 class="title">Preview</h1>
-                            <a id="autofocus" href="#">
-                                <img id="preview" src="/api/v1/preview.jpg" />
-                            </a>
-                            <p><b>Click  image to trigger autofocus.</b><br/><small>Auto-refreshes every 2 seconds.</small></p>
+                            <img id="preview" src="/api/v1/preview.jpg" />
+                            <p><small>Auto-refreshes every 2 seconds.</small></p>
                         </div>
                         <div class="column">
                             <h1>Documentation</h1>
                             <ol>
-                                <li>Place your phone above your water meter</li>
+                                <li>Place the camera above your water meter</li>
                                 <li>Configure capturing rectangle (see <a href="#capturing">Capturing</a>)</li>
                                 <li>Enable calibration messages (see <a href="#connectivity">MQTT</a>)</li>
                                 <li>Use a MQTT client to view calibration messages. Set <em>Trigger High</em> and <em>Trigger Low</em> to according to the readings.</em></li>
@@ -61,8 +59,6 @@
                         <input type="number" id="capture-h" name="capture-h">
                     </div>
                 </div>
-                <input type="checkbox" id="flashlight" name="flashlight">
-                <label for="flashlight" class="label-inline">Turn on flashlight</label>
                 <label for="contrast">Contrast <small>(0-255)</small></label>
                 <input type="number" id="contrast" name="contrast" min="0" max="255">
                 <label for="brightness">Brightness <small>(0-255)</small></label>
@@ -171,12 +167,6 @@ $("#form").on("submit", function (e) {
         xhr2.send(JSON.stringify({"l": parseFloat(data["value-m3"]) * 1000.0}));
     }
 });
-
-$("#autofocus").on("click", function(e) {
-    let xhr1 = new XMLHttpRequest();
-    xhr1.open('POST', '/api/v1/autofocus');
-    xhr1.send();
-})
 
 $("#enable-value-m3").on("click", function(e, ...args) {
     toggle("#enable-value-m3", "#value");

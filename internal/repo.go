@@ -33,7 +33,6 @@ type Config struct {
 	MqttTopic            string `json:"mqtt-topic"`
 	MqttCalibrationTopic string `json:"mqtt-calibration-topic"`
 	MqttTickerSeconds    int    `json:"mqtt-ticker-seconds"`
-	Flashlight           bool   `json:"flashlight"`
 	Calibration          bool   `json:"calibration"`
 }
 
@@ -49,7 +48,6 @@ var config = Config{
 	MqttTopic:            "wossamessa/meter",
 	MqttCalibrationTopic: "wossamessa/calibration",
 	MqttTickerSeconds:    300,
-	Flashlight:           false,
 	Calibration:          false,
 	StepSize:             1,
 	TriggerHigh:          1_000_000,
