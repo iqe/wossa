@@ -26,7 +26,7 @@ func NewMqttClient(config Config, meterChanges chan Meter, calibrationValues cha
 	c := new(mqttClient)
 
 	c.config = config
-	c.tickerPeriod = 15 * time.Second // TODO put into config
+	c.tickerPeriod = time.Duration(config.MqttTickerSeconds) * time.Second
 	c.meterChanges = meterChanges
 	c.calibrationValues = calibrationValues
 

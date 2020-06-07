@@ -141,7 +141,7 @@ func RunWebCam(dev string) {
 	)
 	go encodeToImage(cam, copyComplete, fi, w, h, f)
 
-	zeroingPeriod := 5 * time.Second // TODO put into config
+	zeroingPeriod := time.Duration(config.ZeroingSeconds) * time.Second
 
 	detector := pulseDetector{}
 	zeroingPending := false

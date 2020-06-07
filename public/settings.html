@@ -73,6 +73,8 @@
                 <input type="number" id="trigger-low" name="trigger-low">
                 <label for="step-size">Liters per rotation</label>
                 <input type="number" id="step-size" name="step-size">
+                <label for="zeroing-seconds">Reset to 0 l/m after this many seconds</label>
+                <input type="number" id="zeroing-seconds" name="zeroing-seconds">
             </section>
             <section class="container" id="current-value">
                 <h1>Current Value</h1>
@@ -94,6 +96,8 @@
                     <input type="number" id="mqtt-port" name="mqtt-port" min="0" max="65535">
                     <label for="mqtt-topic">Topic</label>
                     <input type="text" id="mqtt-topic" name="mqtt-topic">
+                    <label for="mqtt-ticker-seconds">Send message at least every <i>n</i> seconds</label>
+                    <input type="number" id="mqtt-ticker-seconds" name="mqtt-ticker-seconds">
                     <label for="mqtt-calibration-topic">Calibration Topic</label>
                     <input type="text" id="mqtt-calibration-topic" name="mqtt-calibration-topic">
                     <input type="checkbox" id="calibration" name="calibration">

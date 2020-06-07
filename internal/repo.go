@@ -25,10 +25,12 @@ type Config struct {
 	Contrast             int    `json:"contrast"`
 	Brightness           int    `json:"brightness"`
 	StepSize             int    `json:"step-size"`
+	ZeroingSeconds       int    `json:"zeroing-seconds"`
 	MqttHost             string `json:"mqtt-host"`
 	MqttPort             int    `json:"mqtt-port"`
 	MqttTopic            string `json:"mqtt-topic"`
 	MqttCalibrationTopic string `json:"mqtt-calibration-topic"`
+	MqttTickerSeconds    int    `json:"mqtt-ticker-seconds"`
 	Flashlight           bool   `json:"flashlight"`
 	Calibration          bool   `json:"calibration"`
 }
@@ -44,11 +46,13 @@ var config = Config{
 	MqttPort:             1883,
 	MqttTopic:            "wossamessa/meter",
 	MqttCalibrationTopic: "wossamessa/calibration",
+	MqttTickerSeconds:    300,
 	Flashlight:           false,
 	Calibration:          false,
 	StepSize:             1,
 	TriggerHigh:          1_000_000,
 	TriggerLow:           500_000,
+	ZeroingSeconds:       60,
 }
 var configLoaded = false
 
