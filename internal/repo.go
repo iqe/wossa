@@ -2,9 +2,11 @@ package wossamessa
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
-	"log"
 	"time"
+
+	log "github.com/inconshreveable/log15"
 )
 
 // Meter represents the current value of the meter
@@ -80,13 +82,11 @@ func loadConfig() (Config, error) {
 	}
 	data, err := ioutil.ReadFile(ConfigDir + "/config.json")
 	if err != nil {
-		//log.Printf("Failed to read config.json: %s\n", err)
-		return config, nil
+		return config, fmt.Errorf("Reading config.json: %s\n", err)
 	}
 	err = json.Unmarshal(data, &config)
 	if err != nil {
-		log.Printf("Failed to parse config.json: %s\n", err)
-		return config, nil
+		return config, fmt.Errorf("Parsing config.json: %s\n", err)
 	}
 
 	configLoaded = true
@@ -102,8 +102,6 @@ func PulseMeter() (Meter, error) {
 	m.Liters += config.StepSize
 	m.LitersPerMinute = float64(config.StepSize) / now.Sub(lastMeterChange).Minutes()
 	m.Timestamp = now.Unix()
-
-	log.Printf("Pulse %v\n", m)
 
 	err := saveMeter(m, false)
 	return m, err
@@ -130,7 +128,7 @@ func saveMeter(m Meter, forceSaveToDisk bool) error {
 	if forceSaveToDisk || m.LitersPerMinute == 0 || time.Now().Sub(lastMeterSave) > 5*time.Minute {
 		err := saveToFile(m, "meter.json")
 		if err != nil {
-			return err
+			return fmt.Errorf("Saving meter: %s\n", err)
 		}
 		lastMeterSave = time.Now()
 	}
@@ -141,12 +139,15 @@ func saveMeter(m Meter, forceSaveToDisk bool) error {
 func saveToFile(v interface{}, filename string) error {
 	data, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
-		return err
+		return fmt.Errorf("Marshalling JSON for %s: %s\n", filename, err)
 	}
 	err = ioutil.WriteFile(ConfigDir+"/"+filename, data, 0644)
 	if err != nil {
-		return err
+		return fmt.Errorf("Writing %s: %s\n", filename, err)
 	}
+
+	log.Info("Saved file", "filename", filename, "content", v)
+
 	return nil
 }
 

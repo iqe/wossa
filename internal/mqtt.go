@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math/rand"
 	"time"
+
+	log "github.com/inconshreveable/log15"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
@@ -37,6 +38,9 @@ func (c *mqttClient) Connect(config Config) error {
 	c.Disconnect()
 
 	broker := fmt.Sprintf("tcp://%s:%d", config.MqttHost, config.MqttPort)
+
+	log.Info("Connecting to MQTT broker", "broker", broker)
+
 	opts := mqtt.NewClientOptions().AddBroker(broker).SetClientID(fmt.Sprintf("wossamessa-%d", rand.Int31()))
 
 	c.client = mqtt.NewClient(opts)
@@ -57,6 +61,8 @@ func (c *mqttClient) Connect(config Config) error {
 
 func (c *mqttClient) Disconnect() {
 	if c.connected {
+		log.Info("Disconnecting from MQTT broker")
+
 		c.ticker.Stop()
 		c.ctxCancelFunc()
 		c.client.Disconnect(0)
@@ -80,10 +86,16 @@ func (c *mqttClient) processMessages() {
 	for {
 		select {
 		case m := <-c.meterChanges:
-			c.sendMeterMessage(m)
+			err := c.sendMeterMessage(m)
+			if err != nil {
+				log.Warn("Failed to send meter message", "error", err)
+			}
 			c.resetTicker()
 		case v := <-c.calibrationValues:
-			c.sendCalibrationMessage(v)
+			err := c.sendCalibrationMessage(v)
+			if err != nil {
+				log.Warn("Failed to send calibration message", "error", err)
+			}
 			c.resetTicker()
 		case <-c.ticker.C:
 			m, err := loadMeter()
@@ -98,20 +110,25 @@ func (c *mqttClient) processMessages() {
 	}
 }
 
-func (c *mqttClient) sendMeterMessage(meter Meter) {
-	config, _ := loadConfig()
-	data, _ := json.Marshal(meter)
-	log.Printf("Mqtt: Sending meter: %s\n", data)
-
-	token := c.client.Publish(config.MqttTopic, 0, false, data)
-	token.Wait()
+func (c *mqttClient) sendMeterMessage(meter Meter) error {
+	return c.publish(c.config.MqttTopic, meter)
 }
 
-func (c *mqttClient) sendCalibrationMessage(value int) {
-	data, _ := json.Marshal(value)
-	log.Printf("Mqtt: Sending calibration value: %s\n", value)
-	token := c.client.Publish(c.config.MqttCalibrationTopic, 0, false, data)
+func (c *mqttClient) sendCalibrationMessage(value int) error {
+	return c.publish(c.config.MqttCalibrationTopic, value)
+}
+
+func (c *mqttClient) publish(topic string, message interface{}) error {
+	data, err := json.Marshal(meter)
+	if err != nil {
+		return err
+	}
+
+	log.Debug("Publishing MQTT message", "topic", topic, "message", string(data))
+
+	token := c.client.Publish(topic, 0, false, data)
 	token.Wait()
+	return token.Error()
 }
 
 func (c *mqttClient) resetTicker() {
