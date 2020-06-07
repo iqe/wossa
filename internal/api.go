@@ -2,6 +2,8 @@ package wossamessa
 
 import (
 	"bytes"
+	"fmt"
+	"log"
 
 	"github.com/gin-gonic/gin"
 )
@@ -29,7 +31,7 @@ func Run() {
 	r.POST("/api/v1/meter.json", func(c *gin.Context) {
 		m, err := loadMeter()
 		if err != nil {
-			c.AbortWithError(500, err)
+			c.AbortWithError(500, fmt.Errorf("Failed to load meter: %s", err))
 			return
 		}
 
@@ -39,7 +41,11 @@ func Run() {
 			return
 		}
 
-		saveMeter(m)
+		m, err = UpdateMeter(m)
+		if err != nil {
+			c.AbortWithError(500, fmt.Errorf("failed to update meter: %s", err))
+			return
+		}
 		c.JSON(200, m)
 	})
 
@@ -60,6 +66,7 @@ func Run() {
 
 		err = c.BindJSON(&config)
 		if err != nil {
+			log.Printf("Failed to bindjson: %s\n", err)
 			c.AbortWithError(400, err)
 			return
 		}

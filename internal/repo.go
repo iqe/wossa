@@ -93,7 +93,7 @@ func loadConfig() (Config, error) {
 	return config, nil
 }
 
-func PulseMeter() Meter {
+func PulseMeter() (Meter, error) {
 	now := time.Now()
 
 	m, _ := loadMeter()
@@ -105,26 +105,29 @@ func PulseMeter() Meter {
 
 	log.Printf("Pulse %v\n", m)
 
-	saveMeter(m)
-	return m
+	err := saveMeter(m, false)
+	return m, err
 }
 
-func ZeroPulseMeter() Meter {
+func ZeroPulseMeter() (Meter, error) {
 	m, _ := loadMeter()
 	m.LitersPerMinute = 0
 	m.Timestamp = time.Now().Unix()
-	saveMeter(m)
+	err := saveMeter(m, false)
 
-	log.Printf("Zero %v\n", m)
-
-	return m
+	return m, err
 }
 
-func saveMeter(m Meter) error {
+func UpdateMeter(m Meter) (Meter, error) {
+	err := saveMeter(m, true)
+	return m, err
+}
+
+func saveMeter(m Meter, forceSaveToDisk bool) error {
 	meter = m
 
-	// Save to disk whenever the meter stops running or after 5 min
-	if m.LitersPerMinute == 0 || time.Now().Sub(lastMeterSave) > 5*time.Minute {
+	// Save to disk if requested or if the meter stops running or after 5 min
+	if forceSaveToDisk || m.LitersPerMinute == 0 || time.Now().Sub(lastMeterSave) > 5*time.Minute {
 		err := saveToFile(m, "meter.json")
 		if err != nil {
 			return err

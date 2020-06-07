@@ -189,7 +189,10 @@ func RunWebCam(dev string) {
 		pulseDetected := detector.process(sum)
 
 		if pulseDetected {
-			m := PulseMeter()
+			m, err := PulseMeter()
+			if err != nil {
+				log.Printf("Failure while pulsing meter: %s\n", err)
+			}
 
 			meterChanges <- m
 			zeroingPending = true
@@ -198,7 +201,10 @@ func RunWebCam(dev string) {
 
 		// Pulse reset
 		if zeroingPending && now.Sub(lastMeterChange) > zeroingPeriod {
-			m := ZeroPulseMeter()
+			m, err := ZeroPulseMeter()
+			if err != nil {
+				log.Printf("Failure while resetting meter to 0 l/m: %s\n", err)
+			}
 
 			meterChanges <- m
 			zeroingPending = false
