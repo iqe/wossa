@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"time"
 
 	log "github.com/inconshreveable/log15"
@@ -80,11 +81,15 @@ func loadConfig() (Config, error) {
 	}
 	data, err := ioutil.ReadFile(ConfigDir + "/config.json")
 	if err != nil {
-		return config, fmt.Errorf("Reading config.json: %s\n", err)
-	}
-	err = json.Unmarshal(data, &config)
-	if err != nil {
-		return config, fmt.Errorf("Parsing config.json: %s\n", err)
+		if !os.IsNotExist(err) {
+			return config, fmt.Errorf("Reading config.json: %s\n", err)
+		}
+		// if file does not exist, just use the defaults
+	} else {
+		err = json.Unmarshal(data, &config)
+		if err != nil {
+			return config, fmt.Errorf("Parsing config.json: %s\n", err)
+		}
 	}
 
 	configLoaded = true
