@@ -118,8 +118,8 @@ func RunWebCam(dev string) {
 		panic(err.Error())
 	}
 
-	mqttClient := NewMqttClient(config, meterChanges, calibrationValues)
-	err = mqttClient.Connect()
+	mqttClient := NewMqttClient(meterChanges, calibrationValues)
+	err = mqttClient.Connect(config)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -211,8 +211,16 @@ func RunWebCam(dev string) {
 			lastMeterChange = now
 		}
 
-		// Preview
 		if frameCount%20 == 0 { // ~ every 2 seconds
+			// MQTT config changes
+			if !mqttClient.UsesConfig(config) {
+				err := mqttClient.Connect(config)
+				if err != nil {
+					log.Fatalf("Failed to connect to MQTT broker: %s\n", err)
+				}
+			}
+
+			// Preview
 			select {
 			case fi <- frame:
 				<-copyComplete
