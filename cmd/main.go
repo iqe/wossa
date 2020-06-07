@@ -13,5 +13,5 @@ func main() {
 
 	wossamessa.ConfigDir = *configDir
 	go wossamessa.RunWebCam(*device)
-	wossamessa.Run()
+	wossamessa.RunApi()
 }

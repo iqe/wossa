@@ -9,7 +9,7 @@ import (
 )
 
 // Run runs the web server and blocks forever
-func Run() {
+func RunApi() {
 	r := gin.New()
 	r.Use(gin.Recovery())
 
