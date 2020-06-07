@@ -162,16 +162,10 @@ func RunWebCam(dev string) error {
 
 		sum, x, y := 0, 0, 0
 		for i := 0; i < len(frame); i += 2 { // in YUYV, every second byte contains luma (greyscale pixel)
-			original := frame[i]
-
-			// Brightness / contrast correction
-			adjusted := adjustPixel(original, config.Contrast, config.Brightness)
-			frame[i] = adjusted
-
 			// Calculate sum
 			if y >= config.OffsetY && y <= config.OffsetY+config.CaptureHeight {
 				if x >= config.OffsetX && x <= config.OffsetX+config.CaptureWidth {
-					sum += int(adjusted)
+					sum += int(frame[i])
 				}
 			}
 
@@ -223,6 +217,9 @@ func RunWebCam(dev string) error {
 				}
 			}
 
+			// Brightness / Contrast config changes
+			updateBrightnessAndContrast(cam, config)
+
 			// Preview
 			select {
 			case fi <- frame:
@@ -237,23 +234,6 @@ func RunWebCam(dev string) error {
 
 		frameCount++
 	}
-}
-
-func adjustPixel(pixel byte, contrast int, brightness int) byte {
-	c := float32(contrast) - 128
-	b := float32(brightness) - 128
-
-	c = (259 * (c + 255)) / (255 * (259 - c))
-
-	p := c*(float32(pixel)-128) + 128 + b
-
-	if p < 0 {
-		p = 0
-	}
-	if p > 255 {
-		p = 255
-	}
-	return byte(p)
 }
 
 func encodeToImage(wc *webcam.Webcam, copyComplete chan bool, fi chan []byte, w, h int, format webcam.PixelFormat) {
@@ -316,4 +296,45 @@ func createImage(frame []byte, rgba *image.RGBA, w int, h int, config Config) {
 			y++
 		}
 	}
+}
+
+func updateBrightnessAndContrast(cam *webcam.Webcam, config Config) {
+	cidBrightness := webcam.ControlID(webcam.V4L2_CID_BASE)
+	cidContrast := webcam.ControlID(webcam.V4L2_CID_BASE + 1)
+
+	trySetCameraControl(cam, cidBrightness, "brightness", int32(config.Brightness))
+	trySetCameraControl(cam, cidContrast, "contrast", int32(config.Contrast))
+}
+
+func trySetCameraControl(cam *webcam.Webcam, cid webcam.ControlID, name string, newValue int32) {
+	controls := cam.GetControls()
+	for id, c := range controls {
+		if id == cid {
+			newValue = clamp(newValue, c.Min, c.Max)
+		}
+	}
+
+	oldValue, err := cam.GetControl(cid)
+	if err != nil {
+		log.Warn("Failed to get webcam control", "control", name, "error", err)
+	} else {
+		if newValue != oldValue {
+			err = cam.SetControl(cid, newValue)
+			if err != nil {
+				log.Warn("Failed to set webcam control", "control", name, "oldValue", oldValue, "newValue", config.Brightness, "error", err)
+			} else {
+				log.Debug("Set webcam control", "control", name, "oldValue", oldValue, "newValue", newValue)
+			}
+		}
+	}
+}
+
+func clamp(val int32, min int32, max int32) int32 {
+	if val < min {
+		val = min
+	}
+	if val > max {
+		val = max
+	}
+	return val
 }
