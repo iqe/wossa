@@ -119,7 +119,7 @@ func (c *mqttClient) sendCalibrationMessage(value int) error {
 }
 
 func (c *mqttClient) publish(topic string, message interface{}) error {
-	data, err := json.Marshal(meter)
+	data, err := json.Marshal(message)
 	if err != nil {
 		return err
 	}
