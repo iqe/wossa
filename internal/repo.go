@@ -37,6 +37,8 @@ type Config struct {
 	Calibration          bool   `json:"calibration"`
 }
 
+var meterLoaded = false
+
 var config = Config{
 	CaptureWidth:         10,
 	CaptureHeight:        30,
@@ -79,21 +81,12 @@ func loadConfig() (Config, error) {
 	if configLoaded {
 		return config, nil
 	}
-	data, err := ioutil.ReadFile(ConfigDir + "/config.json")
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return config, fmt.Errorf("Reading config.json: %s\n", err)
-		}
-		// if file does not exist, just use the defaults
-	} else {
-		err = json.Unmarshal(data, &config)
-		if err != nil {
-			return config, fmt.Errorf("Parsing config.json: %s\n", err)
-		}
-	}
 
-	configLoaded = true
-	return config, nil
+	err := loadFromFile(&config, "config.json")
+	if err == nil {
+		configLoaded = true
+	}
+	return config, err
 }
 
 func PulseMeter() (Meter, error) {
@@ -139,6 +132,18 @@ func saveMeter(m Meter, forceSaveToDisk bool) error {
 	return nil
 }
 
+func loadMeter() (Meter, error) {
+	if meterLoaded {
+		return meter, nil
+	}
+
+	err := loadFromFile(&meter, "meter.json")
+	if err == nil {
+		meterLoaded = true
+	}
+	return meter, err
+}
+
 func saveToFile(v interface{}, filename string) error {
 	data, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
@@ -154,8 +159,21 @@ func saveToFile(v interface{}, filename string) error {
 	return nil
 }
 
-func loadMeter() (Meter, error) {
-	return meter, nil
+func loadFromFile(v interface{}, filename string) error {
+	data, err := ioutil.ReadFile(ConfigDir + "/" + filename)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return fmt.Errorf("Reading %s: %s\n", filename, err)
+		}
+		// if file does not exist, just use the defaults
+	} else {
+		err = json.Unmarshal(data, v)
+		if err != nil {
+			return fmt.Errorf("Parsing %s: %s\n", filename, err)
+		}
+	}
+
+	return nil
 }
 
 func savePreview(jpeg []byte) error {
