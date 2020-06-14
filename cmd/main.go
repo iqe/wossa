@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 
@@ -10,12 +11,22 @@ import (
 	wossamessa "github.com/iqe/wossamessa/internal"
 )
 
+var (
+	version = "undefined" // updated during release build
+)
+
 func main() {
 	device := flag.String("d", "/dev/video0", "Video device to use")
 	configDir := flag.String("c", ".", "Directory for config and data files")
 	apiAddr := flag.String("l", "0.0.0.0:8080", "Host:port for HTTP API")
 	verbose := flag.Bool("v", false, "Print more verbose messages")
+	versionFlag := flag.Bool("V", false, "Print version and exit")
 	flag.Parse()
+
+	if *versionFlag {
+		fmt.Printf("wossamessa - version %s\n", version)
+		os.Exit(0)
+	}
 
 	logLevel := log.LvlInfo
 	if *verbose {
