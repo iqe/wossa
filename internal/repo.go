@@ -117,6 +117,10 @@ func UpdateMeter(m Meter) (Meter, error) {
 	return m, err
 }
 
+func PersistMeter() error {
+	return saveMeter(meter, true)
+}
+
 func saveMeter(m Meter, forceSaveToDisk bool) error {
 	meter = m
 

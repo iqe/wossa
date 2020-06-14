@@ -41,6 +41,12 @@ func main() {
 	}()
 
 	waitForCtrlC()
+
+	// Write the current meter to disk on clean exit
+	err := wossamessa.PersistMeter()
+	if err != nil {
+		log.Error("Error while persisting meter", "error", err)
+	}
 }
 
 func waitForCtrlC() {
