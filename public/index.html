@@ -46,7 +46,7 @@
             let data = JSON.parse(xhr.response)
 
             $("#m3").text((data["l"] / 1000.0).toFixed(3))
-            $("#lpm").text(data["lpm"])
+            $("#lpm").text(data["lpm"].toFixed(1))
         };
 
         lastReload = Date.now();
