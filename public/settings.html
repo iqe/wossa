@@ -9,6 +9,7 @@
 
     <link rel="stylesheet" href="milligram.min.css">
     <script src="cash.min.js"></script>
+    <script src="chart.js"></script>
     <style>
         .disabled {
             color: lightgray;
@@ -17,26 +18,24 @@
 </head>
 <body>
     <main class="wrapper">
-        <form method="GET" id="form">
-            <section class="container">
-                <div class="row">
-                    <div class="column">
-                            <h1 class="title">Preview</h1>
-                            <img id="preview" src="/api/v1/preview.jpg" />
-                            <p><small>Auto-refreshes every 2 seconds.</small></p>
-                        </div>
-                        <div class="column">
-                            <h1>Documentation</h1>
-                            <ol>
-                                <li>Place the camera above your water meter</li>
-                                <li>Configure capturing rectangle (see <a href="#capturing">Capturing</a>)</li>
-                                <li>Enable calibration messages (see <a href="#connectivity">MQTT</a>)</li>
-                                <li>Use a MQTT client to view calibration messages. Set <em>Trigger High</em> and <em>Trigger Low</em> to according to the readings.</em></li>
-                                <li>Optional: Set initial meter value (see <a href"current-value">Current Value</a>)</li>
-                            </ol>
-                        </div>
+        <section class="container">
+            <div class="row">
+                <div class="column-25">
+                    <h1 class="title">Preview</h1>
+                    <img id="preview" src="/api/v1/preview.jpg" />
+                    <p><small>Auto-refreshes every 2 seconds.</small></p>
+                </div>
+                <div class="column">
+                    <h1 class="title">&nbsp;</h1>
+                    <canvas id="calibrationChart" style="width: 100%; height: 150px"></canvas>
+                    <div class="float-right">
+                        <input type="checkbox" id="calibration" name="calibration">
+                        <label for="calibration" class="label-inline">Send calibration messages</label>
                     </div>
-            </section>
+                </div>
+            </div>
+        </section>
+        <form method="GET" id="form">
             <section class="container">
                 <h1 class="title" id="capturing">Capturing</h1>
                 <div class="row">
@@ -94,10 +93,7 @@
                     <input type="text" id="mqtt-topic" name="mqtt-topic">
                     <label for="mqtt-ticker-seconds">Send message at least every <i>n</i> seconds</label>
                     <input type="number" id="mqtt-ticker-seconds" name="mqtt-ticker-seconds">
-                    <label for="mqtt-calibration-topic">Calibration Topic</label>
-                    <input type="text" id="mqtt-calibration-topic" name="mqtt-calibration-topic">
-                    <input type="checkbox" id="calibration" name="calibration">
-                    <label for="calibration" class="label-inline">Send calibration messages</label>
+
                 </fieldset>
             </section>
             <section class="container" id="save">
@@ -140,6 +136,15 @@ $.fn.serializeJSON = function() {
 
   return result
 }
+
+$('#calibration').on('click', function(e, ...args) {
+    let enabled = $(this).prop('checked');
+
+    let xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/v1/config.json');
+    xhr.setRequestHeader("Content-type", "application/json");
+    xhr.send(JSON.stringify({calibration: enabled}));
+});
 
 $("#form").on("submit", function (e) {
     e.preventDefault();
@@ -208,6 +213,49 @@ $(document).ready(function() {
         $("input#value-m3").val((data["l"] / 1000.0).toFixed(3));
     }
     xhr2.send();
+
+    var ctx = document.getElementById('calibrationChart').getContext('2d');
+    var calibrationChart = new Chart(ctx, {
+        type: 'scatter',
+        data: {
+            datasets: [{
+                showLine: true,
+                fill: false,
+                xAxisID: "x",
+                data: []
+            }]
+        },
+        options: {
+            legend: {
+                display: false
+            },
+            animation: {
+                duration: 0
+            },
+            scales: {
+                xAxes: [{
+                    id: "x",
+                    display: false
+                }]
+            }
+        }
+    });
+
+    var i = 0;
+    var conn = new WebSocket("ws://" + window.location.host + "/api/v1/ws");
+    conn.onmessage = function (event) {
+        calibrationChart.data.datasets[0].data.push({
+            x: i,
+            y: parseInt(event.data)
+        })
+
+        if (i > 120) {
+            calibrationChart.data.datasets[0].data.shift()
+        }
+
+        calibrationChart.update();
+        i++;
+    }
 })
 
 var timer = setInterval(function() {
@@ -233,7 +281,6 @@ function disable(fieldset) {
     $(fieldset).addClass("disabled")
     $(fieldset).find("input").attr("disabled", true)
 }
-
 </script>
 
 </body>

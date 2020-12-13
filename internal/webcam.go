@@ -106,18 +106,17 @@ func readNextFrame(cam *webcam.Webcam) ([]byte, error) {
 }
 
 // RunWebCam starts recording
-func RunWebCam(dev string) error {
+func RunWebCam(dev string, calibrationValues chan int) error {
 	log.Info("Using webcam", "device", dev)
 
 	meterChanges := make(chan Meter)
-	calibrationValues := make(chan int)
 
 	config, err := loadConfig()
 	if err != nil {
 		return fmt.Errorf("Loading config: %s", err)
 	}
 
-	mqttClient := NewMqttClient(meterChanges, calibrationValues)
+	mqttClient := NewMqttClient(meterChanges)
 	err = mqttClient.Connect(config)
 	if err != nil {
 		return fmt.Errorf("Initial connect to MQTT: %s", err)

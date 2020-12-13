@@ -3,13 +3,20 @@ package wossamessa
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	log "github.com/inconshreveable/log15"
 )
 
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+}
+
 // Run runs the web server and blocks forever
-func RunApi(addr string, verbose bool) error {
+func RunApi(addr string, verbose bool, calibrationValues chan int) error {
 	if !verbose {
 		gin.SetMode(gin.ReleaseMode)
 		log.Info("Starting HTTP API", "address", fmt.Sprintf("http://%s", addr))
@@ -87,6 +94,25 @@ func RunApi(addr string, verbose bool) error {
 		reader := bytes.NewReader(jpeg)
 
 		c.DataFromReader(200, int64(len(jpeg)), "image/jpeg", reader, map[string]string{})
+	})
+
+	r.GET("/api/v1/ws", func(c *gin.Context) {
+		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+		if err != nil {
+			c.AbortWithError(500, err)
+			return
+		}
+
+		for {
+			select {
+			case v := <-calibrationValues:
+				val := []byte(strconv.Itoa(v))
+				if err := conn.WriteMessage(websocket.TextMessage, val); err != nil {
+					c.AbortWithError(500, err)
+					return
+				}
+			}
+		}
 	})
 
 	return r.Run(addr)

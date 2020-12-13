@@ -19,43 +19,41 @@ type Meter struct {
 
 // Config represents the configuration
 type Config struct {
-	CaptureWidth         int    `json:"capture-w"`
-	CaptureHeight        int    `json:"capture-h"`
-	OffsetX              int    `json:"offset-x"`
-	OffsetY              int    `json:"offset-y"`
-	TriggerHigh          int    `json:"trigger-high"`
-	TriggerLow           int    `json:"trigger-low"`
-	Contrast             int    `json:"contrast"`
-	Brightness           int    `json:"brightness"`
-	StepSize             int    `json:"step-size"`
-	ZeroingSeconds       int    `json:"zeroing-seconds"`
-	MqttHost             string `json:"mqtt-host"`
-	MqttPort             int    `json:"mqtt-port"`
-	MqttTopic            string `json:"mqtt-topic"`
-	MqttCalibrationTopic string `json:"mqtt-calibration-topic"`
-	MqttTickerSeconds    int    `json:"mqtt-ticker-seconds"`
-	Calibration          bool   `json:"calibration"`
+	CaptureWidth      int    `json:"capture-w"`
+	CaptureHeight     int    `json:"capture-h"`
+	OffsetX           int    `json:"offset-x"`
+	OffsetY           int    `json:"offset-y"`
+	TriggerHigh       int    `json:"trigger-high"`
+	TriggerLow        int    `json:"trigger-low"`
+	Contrast          int    `json:"contrast"`
+	Brightness        int    `json:"brightness"`
+	StepSize          int    `json:"step-size"`
+	ZeroingSeconds    int    `json:"zeroing-seconds"`
+	MqttHost          string `json:"mqtt-host"`
+	MqttPort          int    `json:"mqtt-port"`
+	MqttTopic         string `json:"mqtt-topic"`
+	MqttTickerSeconds int    `json:"mqtt-ticker-seconds"`
+	Calibration       bool   `json:"calibration"`
 }
 
 var meterLoaded = false
 
 var config = Config{
-	CaptureWidth:         10,
-	CaptureHeight:        30,
-	OffsetX:              5,
-	OffsetY:              15,
-	Contrast:             128,
-	Brightness:           128,
-	MqttHost:             "zap",
-	MqttPort:             1883,
-	MqttTopic:            "wossamessa/meter",
-	MqttCalibrationTopic: "wossamessa/calibration",
-	MqttTickerSeconds:    300,
-	Calibration:          false,
-	StepSize:             1,
-	TriggerHigh:          1_000_000,
-	TriggerLow:           500_000,
-	ZeroingSeconds:       60,
+	CaptureWidth:      10,
+	CaptureHeight:     30,
+	OffsetX:           5,
+	OffsetY:           15,
+	Contrast:          128,
+	Brightness:        128,
+	MqttHost:          "zap",
+	MqttPort:          1883,
+	MqttTopic:         "wossamessa/meter",
+	MqttTickerSeconds: 300,
+	Calibration:       false,
+	StepSize:          1,
+	TriggerHigh:       1_000_000,
+	TriggerLow:        500_000,
+	ZeroingSeconds:    60,
 }
 var configLoaded = false
 

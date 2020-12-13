@@ -35,8 +35,9 @@ func main() {
 	log.Root().SetHandler(log.LvlFilterHandler(logLevel, log.StdoutHandler))
 
 	wossamessa.ConfigDir = *configDir
+	calibrationValues := make(chan int)
 	go func() {
-		err := wossamessa.RunWebCam(*device)
+		err := wossamessa.RunWebCam(*device, calibrationValues)
 		if err != nil {
 			log.Error("Error while running webcam", "error", err)
 			os.Exit(1)
@@ -44,7 +45,7 @@ func main() {
 	}()
 
 	go func() {
-		err := wossamessa.RunApi(*apiAddr, *verbose)
+		err := wossamessa.RunApi(*apiAddr, *verbose, calibrationValues)
 		if err != nil {
 			log.Error("Error while running API", "error", err)
 			os.Exit(1)

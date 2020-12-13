@@ -13,22 +13,20 @@ import (
 )
 
 type mqttClient struct {
-	config            Config
-	meterChanges      chan Meter
-	calibrationValues chan int
-	tickerPeriod      time.Duration
-	client            mqtt.Client
-	ticker            *time.Ticker
-	ctx               context.Context
-	ctxCancelFunc     context.CancelFunc
-	connected         bool
+	config        Config
+	meterChanges  chan Meter
+	tickerPeriod  time.Duration
+	client        mqtt.Client
+	ticker        *time.Ticker
+	ctx           context.Context
+	ctxCancelFunc context.CancelFunc
+	connected     bool
 }
 
-func NewMqttClient(meterChanges chan Meter, calibrationValues chan int) *mqttClient {
+func NewMqttClient(meterChanges chan Meter) *mqttClient {
 	c := new(mqttClient)
 
 	c.meterChanges = meterChanges
-	c.calibrationValues = calibrationValues
 	c.connected = false
 
 	return c
@@ -76,10 +74,9 @@ func (c *mqttClient) UsesConfig(newConfig Config) bool {
 	sameHost := curConfig.MqttHost == newConfig.MqttHost
 	samePort := curConfig.MqttPort == newConfig.MqttPort
 	sameTopic := curConfig.MqttTopic == newConfig.MqttTopic
-	sameCalTopic := curConfig.MqttCalibrationTopic == newConfig.MqttCalibrationTopic
 	sameTicker := c.tickerPeriod == time.Duration(newConfig.MqttTickerSeconds)*time.Second
 
-	return sameHost && samePort && sameTopic && sameCalTopic && sameTicker
+	return sameHost && samePort && sameTopic && sameTicker
 }
 
 func (c *mqttClient) processMessages() {
@@ -89,12 +86,6 @@ func (c *mqttClient) processMessages() {
 			err := c.sendMeterMessage(m)
 			if err != nil {
 				log.Warn("Failed to send meter message", "error", err)
-			}
-			c.resetTicker()
-		case v := <-c.calibrationValues:
-			err := c.sendCalibrationMessage(v)
-			if err != nil {
-				log.Warn("Failed to send calibration message", "error", err)
 			}
 			c.resetTicker()
 		case <-c.ticker.C:
@@ -112,10 +103,6 @@ func (c *mqttClient) processMessages() {
 
 func (c *mqttClient) sendMeterMessage(meter Meter) error {
 	return c.publish(c.config.MqttTopic, meter)
-}
-
-func (c *mqttClient) sendCalibrationMessage(value int) error {
-	return c.publish(c.config.MqttCalibrationTopic, value)
 }
 
 func (c *mqttClient) publish(topic string, message interface{}) error {
