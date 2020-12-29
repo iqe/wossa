@@ -1,4 +1,4 @@
-package wossamessa
+package wossa
 
 import (
 	"context"
@@ -39,7 +39,7 @@ func (c *mqttClient) Connect(config Config) error {
 
 	log.Info("Connecting to MQTT broker", "broker", broker)
 
-	opts := mqtt.NewClientOptions().AddBroker(broker).SetClientID(fmt.Sprintf("wossamessa-%d", rand.Int31()))
+	opts := mqtt.NewClientOptions().AddBroker(broker).SetClientID(fmt.Sprintf("wossa-%d", rand.Int31()))
 
 	c.client = mqtt.NewClient(opts)
 	c.config = config

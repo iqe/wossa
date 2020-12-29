@@ -1,4 +1,4 @@
-module github.com/iqe/wossamessa
+module github.com/iqe/wossa
 
 go 1.14
 

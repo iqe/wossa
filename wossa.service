@@ -1,11 +1,11 @@
 [Unit]
-Description=Wossamessa
+Description=Wossa
 After=network.target
 
 [Service]
-User=wossamessa
-WorkingDirectory=/opt/wossamessa
-ExecStart=/opt/wossamessa/wossamessa -c ./data
+User=wossa
+WorkingDirectory=/opt/wossa
+ExecStart=/opt/wossa/wossa -c ./data
 Restart=always
 RestartSec=5
 StartLimitIntervalSec=0

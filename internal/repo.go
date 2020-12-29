@@ -1,4 +1,4 @@
-package wossamessa
+package wossa
 
 import (
 	"encoding/json"
@@ -47,7 +47,7 @@ var config = Config{
 	Brightness:        128,
 	MqttHost:          "zap",
 	MqttPort:          1883,
-	MqttTopic:         "wossamessa/meter",
+	MqttTopic:         "wossa/meter",
 	MqttTickerSeconds: 300,
 	Calibration:       false,
 	StepSize:          1,

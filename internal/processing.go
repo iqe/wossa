@@ -1,4 +1,4 @@
-package wossamessa
+package wossa
 
 type pulseDetector struct {
 	lastRaw          int

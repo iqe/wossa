@@ -8,7 +8,7 @@ import (
 
 	log "github.com/inconshreveable/log15"
 
-	wossamessa "github.com/iqe/wossamessa/internal"
+	wossa "github.com/iqe/wossa/internal"
 )
 
 var (
@@ -24,7 +24,7 @@ func main() {
 	flag.Parse()
 
 	if *versionFlag {
-		fmt.Printf("wossamessa - version %s\n", version)
+		fmt.Printf("wossa - version %s\n", version)
 		os.Exit(0)
 	}
 
@@ -34,10 +34,10 @@ func main() {
 	}
 	log.Root().SetHandler(log.LvlFilterHandler(logLevel, log.StdoutHandler))
 
-	wossamessa.ConfigDir = *configDir
+	wossa.ConfigDir = *configDir
 	calibrationValues := make(chan int)
 	go func() {
-		err := wossamessa.RunWebCam(*device, calibrationValues)
+		err := wossa.RunWebCam(*device, calibrationValues)
 		if err != nil {
 			log.Error("Error while running webcam", "error", err)
 			os.Exit(1)
@@ -45,7 +45,7 @@ func main() {
 	}()
 
 	go func() {
-		err := wossamessa.RunApi(*apiAddr, *verbose, calibrationValues)
+		err := wossa.RunApi(*apiAddr, *verbose, calibrationValues)
 		if err != nil {
 			log.Error("Error while running API", "error", err)
 			os.Exit(1)
@@ -55,7 +55,7 @@ func main() {
 	waitForCtrlC()
 
 	// Write the current meter to disk on clean exit
-	err := wossamessa.PersistMeter()
+	err := wossa.PersistMeter()
 	if err != nil {
 		log.Error("Error while persisting meter", "error", err)
 	}
