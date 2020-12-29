@@ -45,7 +45,7 @@ var config = Config{
 	OffsetY:           15,
 	Contrast:          128,
 	Brightness:        128,
-	MqttHost:          "zap",
+	MqttHost:          "test.mosquitto.org",
 	MqttPort:          1883,
 	MqttTopic:         "wossa/meter",
 	MqttTickerSeconds: 300,
